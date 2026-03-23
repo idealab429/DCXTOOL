@@ -17,30 +17,8 @@ import streamlit.components.v1 as components
 import pyLDAvis
 import pyLDAvis.gensim_models as gensimvis
 
-# 1. 전역 설정 및 커스텀 CSS (고급화 UI)
-st.set_page_config(page_title="DCX-Tool", layout="wide", initial_sidebar_state="expanded")
-
-# --- 💅 커스텀 CSS 적용 ---
-st.markdown("""
-    <style>
-        /* 불필요한 기본 스트림릿 메뉴 및 워터마크 숨기기 */
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        header {visibility: hidden;}
-        
-        /* 메트릭(숫자) 강조 색상 적용 */
-        div[data-testid="stMetricValue"] > div {
-            color: #1f77b4; 
-            font-weight: 800;
-        }
-        
-        /* 탭 디자인 살짝 다듬기 */
-        button[data-baseweb="tab"] {
-            font-weight: 600;
-        }
-    </style>
-""", unsafe_allow_html=True)
-# -------------------------
+# 1. 전역 설정 및 폰트 (타이틀 변경: DCX-Tool)
+st.set_page_config(page_title="DCX-Tool", layout="wide")
 
 FONT_PATH = "./NanumGothic.ttf"
 if os.path.exists(FONT_PATH):
@@ -96,10 +74,8 @@ def get_words(texts):
                     words.append(w)
     return words
 
-# 3. 사이드바 구성 (🗂️ 정돈 및 설명 추가)
+# 3. 사이드바 구성 (타이틀 변경: DCX-Tool)
 st.sidebar.title("🚀 DCX-Tool")
-st.sidebar.caption("Data-Driven Customer Experience Analysis")
-st.sidebar.divider() # 깔끔한 구분선
 
 if 'mode' not in st.session_state:
     st.session_state['mode'] = "유형 A"
@@ -126,7 +102,7 @@ if df_rev is not None and df_sent is not None:
         st.subheader(f"📋 {selected_store} 리뷰 요약")
         c1, c2, c3 = st.columns(3)
         c1.metric("총 리뷰 수", f"{len(current_revs)}개")
-        c2.metric("이미지 수", f"{current_revs.get('photo_count', pd.Series([0])).sum()}개")
+        c2.metric("이미지 수", f"{int(current_revs.get('photo_count', pd.Series([0])).sum())}개")
         if store_texts:
             c3.metric("평균 리뷰 길이", f"{int(current_revs['리뷰내용'].str.len().mean())}자")
             st.divider()
@@ -157,7 +133,7 @@ if df_rev is not None and df_sent is not None:
                         filtered_texts.append(t)
                 
                 if len(filtered_texts) < 2:
-                    st.info(f"💡 '{topic_filter}' 카테고리에 대한 언급이 적어 전체 키워드 분석으로 대체합니다.")
+                    st.info(f"💡 '{topic_filter}' 카테고리에 대한 직접적인 언급이 적어 가게 전체 키워드 분석으로 대체합니다.")
                     filtered_texts = store_texts
             
             words = get_words(filtered_texts)
@@ -165,9 +141,8 @@ if df_rev is not None and df_sent is not None:
             
             if word_counts:
                 actual_font = FONT_PATH if os.path.exists(FONT_PATH) else None
-                # 🎨 컬러 테마 변경: Blues 대신 고급스러운 파란색 계열 유지
                 wc = WordCloud(font_path=actual_font, background_color='white', width=800, height=400, 
-                               colormap='Blues', max_words=100).generate_from_frequencies(word_counts)
+                               colormap='Blues_r', max_words=100).generate_from_frequencies(word_counts)
                 fig, ax = plt.subplots()
                 ax.imshow(wc, interpolation='bilinear')
                 ax.axis('off')
@@ -191,7 +166,7 @@ if df_rev is not None and df_sent is not None:
                         filtered_texts.append(t)
                         
                 if len(filtered_texts) < 2:
-                    st.info(f"💡 '{tm_filter}' 카테고리에 대한 언급이 적어 전체 키워드 분석으로 대체합니다.")
+                    st.info(f"💡 '{tm_filter}' 카테고리에 대한 직접적인 언급이 적어 가게 전체 키워드 분석으로 대체합니다.")
                     filtered_texts = store_texts
                         
             words = get_words(filtered_texts)
@@ -199,9 +174,8 @@ if df_rev is not None and df_sent is not None:
             
             if top_words:
                 df_tree = pd.DataFrame(top_words, columns=['키워드', '빈도수'])
-                # 🎨 컬러 테마 변경: Blues로 톤앤매너 통일
                 fig = px.treemap(df_tree, path=['키워드'], values='빈도수', color='빈도수', 
-                                 color_continuous_scale='Blues', title=f"{selected_store} {tm_filter} 키워드")
+                                 color_continuous_scale='Teal', title=f"{selected_store} {tm_filter} 키워드")
                 st.plotly_chart(fig, use_container_width=True)
             else:
                 st.warning("트리맵을 구성할 단어가 부족합니다.")
@@ -227,14 +201,13 @@ if df_rev is not None and df_sent is not None:
                 fig, ax = plt.subplots(figsize=(10, 6))
                 pos = nx.spring_layout(G, k=0.5)
                 weights = [G[u][v]['weight'] * 0.5 for u, v in G.edges()]
-                # 🎨 컬러 테마 변경: 세련된 파스텔 블루(#A0C4FF) 노드 적용
-                nx.draw(G, pos, with_labels=True, node_color='#A0C4FF', font_family='NanumGothic',
-                        node_size=1000, font_size=10, width=weights, ax=ax, edge_color='#cccccc')
+                nx.draw(G, pos, with_labels=True, node_color='lightgreen', font_family='NanumGothic',
+                        node_size=1000, font_size=10, width=weights, ax=ax)
                 st.pyplot(fig)
             else:
                 st.warning("선택한 빈도수를 만족하는 단어 연결이 없습니다. 빈도수를 낮춰보세요.")
 
-    # [탭 5] 토픽 모델링 (유지)
+    # [탭 5] 토픽 모델링
     with tab5:
         st.subheader("🧪 LDA(Latent Dirichlet Allocation) 토픽 모델링")
         num_topics = st.slider("추출할 토픽 수", 2, 5, 3)
@@ -278,14 +251,11 @@ if df_rev is not None and df_sent is not None:
         
         df_comp = pd.DataFrame({
             '항목': categories,
-            f'[{selected_store}]': store_scores.values.astype(float),
+            f'[{selected_store}] 점수': store_scores.values.astype(float),
             '지역 평균': regional_avg.values.astype(float)
         })
         
-        # 🎨 컬러 테마 변경: 우리 가게는 강렬한 블루(#1f77b4), 지역 평균은 차분한 회색(#d3d3d3)
-        fig_bar = px.bar(df_comp, x='항목', y=[f'[{selected_store}]', '지역 평균'], barmode='group',
-                         color_discrete_sequence=['#1f77b4', '#d3d3d3'])
-        fig_bar.update_layout(legend_title_text='')
+        fig_bar = px.bar(df_comp, x='항목', y=[f'[{selected_store}] 점수', '지역 평균'], barmode='group')
         st.plotly_chart(fig_bar, use_container_width=True)
 
         st.divider()
@@ -310,7 +280,7 @@ if df_rev is not None and df_sent is not None:
                 })
             
             df_sim = pd.DataFrame(sim_results).sort_values(by='자카드 유사도', ascending=False)
-            top_competitors = df_sim[df_sim['가게명'] != selected_store].head(3)
+            top_competitors = df_sim.head(3)
             
             if not top_competitors.empty:
                 best_comp = top_competitors.iloc[0]['가게명']
@@ -350,9 +320,8 @@ if df_rev is not None and df_sent is not None:
                 with c_radar:
                     st.markdown("##### 📊 경쟁사 비교 레이더 차트")
                     fig_radar = go.Figure()
-                    # 🎨 컬러 테마 변경: 우리 가게(블루), 경쟁사(오렌지)
-                    fig_radar.add_trace(go.Scatterpolar(r=my_scores_f.values, theta=categories, fill='toself', name=f'우리 가게', line=dict(color='#1f77b4')))
-                    fig_radar.add_trace(go.Scatterpolar(r=comp_scores_f.values, theta=categories, fill='toself', name=best_comp, line=dict(color='#ff7f0e')))
+                    fig_radar.add_trace(go.Scatterpolar(r=my_scores_f.values, theta=categories, fill='toself', name=f'우리 가게'))
+                    fig_radar.add_trace(go.Scatterpolar(r=comp_scores_f.values, theta=categories, fill='toself', name=best_comp))
                     fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), margin=dict(l=20, r=20, t=20, b=20))
                     st.plotly_chart(fig_radar, use_container_width=True)
 
@@ -361,19 +330,10 @@ if df_rev is not None and df_sent is not None:
                     df_summary = pd.DataFrame({
                         '항목': categories,
                         '내 점수': my_scores_f.round(1).values,
-                        '경쟁사 대비 격차': diff_comp.apply(lambda x: f"▲ {x:.1f}" if x > 0 else (f"▼ {abs(x):.1f}" if x < 0 else "-")).values,
-                        '전체 평균 대비 격차': diff_avg.apply(lambda x: f"▲ {x:.1f}" if x > 0 else (f"▼ {abs(x):.1f}" if x < 0 else "-")).values
+                        '경쟁사 대비 격차': diff_comp.apply(lambda x: f"{x:+.1f}").values,
+                        '전체 평균 대비 격차': diff_avg.apply(lambda x: f"{x:+.1f}").values
                     })
-                    
-                    # 📊 조건부 서식 함수 적용 (양수는 빨간색, 음수는 파란색으로 증감 표현)
-                    def color_diff(val):
-                        if isinstance(val, str):
-                            if '▲' in val: return 'color: #d62728; font-weight: bold;'
-                            elif '▼' in val: return 'color: #1f77b4; font-weight: bold;'
-                        return ''
-                    
-                    styled_df = df_summary.style.map(color_diff, subset=['경쟁사 대비 격차', '전체 평균 대비 격차'])
-                    st.dataframe(styled_df, use_container_width=True, hide_index=True)
+                    st.dataframe(df_summary, use_container_width=True, hide_index=True)
             else:
                 st.warning("비교할 경쟁사가 없습니다.")
 
