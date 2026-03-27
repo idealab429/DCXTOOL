@@ -16,9 +16,56 @@ from gensim.models import LdaModel
 import streamlit.components.v1 as components
 import pyLDAvis
 import pyLDAvis.gensim_models as gensimvis
+import streamlit as st
+import hmac
+# (기존에 있던 import pandas as pd 등등 나머지 import 유지)
 
-# 1. 전역 설정 및 폰트 (타이틀 변경: DCX-Tool)
-st.set_page_config(page_title="DCX-Tool", layout="wide")
+# 1. 전역 설정 (반드시 가장 처음에 와야 함)
+st.set_page_config(page_title="PNU Analytics 2.0", layout="wide")
+
+# ==========================================
+# 🔒 보안: 비밀번호 확인 함수
+# ==========================================
+def check_password():
+    """사용자가 올바른 비밀번호를 입력하면 True를 반환합니다."""
+    
+    def password_entered():
+        """입력한 비밀번호가 Streamlit Secrets에 저장된 값과 같은지 확인"""
+        # hmac을 사용하여 안전하게 비밀번호 비교
+        if hmac.compare_digest(st.session_state["password"], st.secrets["password"]):
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # 보안을 위해 입력된 비밀번호 메모리에서 삭제
+        else:
+            st.session_state["password_correct"] = False
+
+    # 이미 비밀번호를 맞췄다면 통과
+    if st.session_state.get("password_correct", False):
+        return True
+
+    # 비밀번호를 아직 안 맞췄다면 입력창 표시
+    st.markdown("## 🔒 PNU Analytics 2.0 로그인")
+    st.text_input(
+        "접속 비밀번호를 입력하고 엔터를 누르세요.", 
+        type="password", 
+        on_change=password_entered, 
+        key="password"
+    )
+    
+    if "password_correct" in st.session_state:
+        st.error("😕 비밀번호가 틀렸습니다. 다시 시도해주세요.")
+    return False
+
+# 비밀번호 검사 실행 (틀리면 여기서 멈추고 아래 코드는 실행 안 됨)
+if not check_password():
+    st.stop()
+# ==========================================
+
+
+# (이 아래부터는 기존 PNU Analytics 2.0 코드 그대로 유지!)
+# FONT_PATH = "./NanumGothic.ttf"
+# ... (생략) ...
+# 1. 전역 설정 및 폰트
+st.set_page_config(page_title="PNU Analytics 2.0", layout="wide")
 
 FONT_PATH = "./NanumGothic.ttf"
 if os.path.exists(FONT_PATH):
@@ -74,8 +121,8 @@ def get_words(texts):
                     words.append(w)
     return words
 
-# 3. 사이드바 구성 (타이틀 변경: DCX-Tool)
-st.sidebar.title("🚀 DCX-Tool")
+# 3. 사이드바 구성
+st.sidebar.title("📊 PNU Analytics 2.0")
 
 if 'mode' not in st.session_state:
     st.session_state['mode'] = "유형 A"
@@ -102,7 +149,7 @@ if df_rev is not None and df_sent is not None:
         st.subheader(f"📋 {selected_store} 리뷰 요약")
         c1, c2, c3 = st.columns(3)
         c1.metric("총 리뷰 수", f"{len(current_revs)}개")
-        c2.metric("이미지 수", f"{int(current_revs.get('photo_count', pd.Series([0])).sum())}개")
+        c2.metric("이미지 수", f"{current_revs.get('photo_count', pd.Series([0])).sum()}개")
         if store_texts:
             c3.metric("평균 리뷰 길이", f"{int(current_revs['리뷰내용'].str.len().mean())}자")
             st.divider()
@@ -242,7 +289,7 @@ if df_rev is not None and df_sent is not None:
                 else:
                     st.warning("분석할 유효 단어가 부족합니다.")
 
-    # [탭 6] 고객 만족도 분석
+    # [탭 6] 고객 만족도 분석 (가장 최신 업데이트 반영)
     with tab6:
         st.subheader("📈 감성 점수 기반 고객 만족도 분석")
         
@@ -280,7 +327,7 @@ if df_rev is not None and df_sent is not None:
                 })
             
             df_sim = pd.DataFrame(sim_results).sort_values(by='자카드 유사도', ascending=False)
-            top_competitors = df_sim.head(3)
+            top_competitors = df_sim[df_sim['가게명'] != selected_store].head(3)
             
             if not top_competitors.empty:
                 best_comp = top_competitors.iloc[0]['가게명']
@@ -295,6 +342,7 @@ if df_rev is not None and df_sent is not None:
                 
                 st.success(f"🏆 최우수 유사 경쟁사: **{best_comp}** (유사도: {top_competitors.iloc[0]['자카드 유사도']})")
                 
+                # 강점 포인트 2개, 개선 포인트 2개 추출
                 sorted_cats = diff_avg.sort_values(ascending=False)
                 strength_cats = sorted_cats.head(2).index.tolist()
                 weakness_cats = sorted_cats.tail(2).index.tolist()
